@@ -1,0 +1,50 @@
+#!/bin/sh
+# Copyright (c) 2023 LENAR
+
+arg_at="$1"
+acm_file="ttyACM*"
+acm_path=$(find /dev -name "$acm_file" | sort | head -n1)
+script_name="$(basename "$0")"
+
+show_usage() {
+    cat <<EOF
+Usage: $script_name <AT Command>
+
+AT command
+  AT+CLAC              - List all available AT commands
+  AT+ZCAINFO?          - Carrier aggregation info
+  AT+RSTSET            - Factory reset
+
+Examples
+  $script_name AT+CLAC
+  $script_name AT+RSTSET
+EOF
+}
+
+normalize() {
+    echo "$1" | tr 'A-Z' 'a-z'
+}
+
+error_exit() {
+    echo "Error: $1" >&2
+    exit 1
+}
+
+run() {
+    if ! echo "$arg_at" | grep -qi '^AT'; then
+        error_exit "Invalid AT command. It must start with 'AT'."
+    fi
+    sms_tool -d "$acm_path" at "$arg_at" | sed '1,2d'
+}
+
+main() {
+    if [ $# -eq 0 ]; then
+        error_exit "No command specified. Use '$script_name help' for more details."
+    fi
+    case "$(normalize "$1")" in
+        h|help) show_usage ;;
+        *) run ;;
+    esac
+}
+
+main "$@"

@@ -1,0 +1,172 @@
+#!/bin/sh
+# Copyright (c) 2023 LENAR
+
+arg_act="$2"
+arg_band="$3"
+arg_freq="$4"
+arg_cellid="$5"
+script_name="$(basename "$0")"
+
+show_usage() {
+    cat <<EOF
+Usage: $script_name <Mode> <Act> [Band] [Freq] [Cellid]
+
+Mode
+  disable              - Disable frequency/cell lock
+  freq                 - Enable frequency lock
+  cell                 - Enable cell lock
+  status               - Show lock status
+
+Act
+  gsm                  - GSM
+  td                   - UMTS_TD
+  wb                   - UMTS_WB
+  lte                  - LTE
+
+Examples
+  $script_name f l 1 150
+  $script_name c l 3 1350 123
+  $script_name s
+EOF
+}
+
+header() {
+    echo -e "--[       Cell Lock       ]--\n"
+}
+
+normalize() {
+    echo "$1" | tr 'A-Z' 'a-z'
+}
+
+error_exit() {
+    echo "Error: $1" >&2
+    exit 1
+}
+
+get_cell_status() {
+    if at_cell=$(at_cmd "AT*CELL?" | sed -n 's/^\*CELL://p' | xargs 2> /dev/null); then
+        check_mode=$(echo "$at_cell" | awk -F, '{print $1}')
+        [ -z "$check_mode" ] && error_exit "Could not parse cell status."
+    else
+        error_exit "Failed to retrieve cell status."
+    fi
+}
+
+restart_wwan() {
+    if ifup wwan &> /dev/null; then
+        echo "Restarting interface..."
+    else
+        error_exit "Failed to restart interface."
+    fi
+}
+
+enable_celllock() {
+    get_cell_status
+    case "$(normalize "$arg_act")" in
+        g|gsm) arg_act="0"; data="GSM" ;;
+        t|td) arg_act="1"; data="UMTS_TD" ;;
+        w|wb) arg_act="2"; data="UMTS_WB" ;;
+        l|lte) arg_act="3"; data="LTE" ;;
+        '') error_exit "Missing required argument <Act>." ;;
+        *) error_exit "Invalid <Act>. Use '$script_name help' for more details." ;;
+    esac
+    [ -z "$arg_band" ] && error_exit "Missing required argument [Band]."
+    case "$arg_band" in
+        ''|*[!0-9]*) error_exit "[Band] must be numeric." ;;
+    esac
+    [ -z "$arg_freq" ] && error_exit "Missing required argument [Freq]."
+    case "$arg_freq" in
+        ''|*[!0-9]*) error_exit "[Freq] must be numeric." ;;
+    esac
+    if [ "$arg_mode" = "2" ]; then
+        [ -z "$arg_cellid" ] && error_exit "Cell lock requires a [Cellid]."
+        case "$arg_cellid" in
+            ''|*[!0-9]*) error_exit "[Cellid] must be numeric." ;;
+        esac
+        cellid="$arg_cellid"
+    else
+        cellid="0"
+    fi
+    case "$arg_mode" in
+        1) title="Frequency" ;;
+        2) title="Cell" ;;
+    esac
+    if at_cmd "AT*CELL=$arg_mode,$arg_act,$arg_band,$arg_freq,$cellid" &> /dev/null; then
+        header
+        echo "${title} lock enabled"
+        echo "Details:"
+        echo "  Technology : ${data}"
+        echo "  Band       : ${arg_band}"
+        echo "  Frequency  : ${arg_freq}"
+        echo "  Cell ID    : ${cellid}"
+        echo ""
+        restart_wwan
+    else
+        error_exit "Failed to enable lock."
+    fi
+}
+
+disable_celllock() {
+    get_cell_status
+    case "$check_mode" in
+        0) result="No active lock" ;;
+        1) result="Frequency lock disabled" ;;
+        2) result="Cell lock disabled" ;;
+        *) result="Unknown status" ;;
+    esac
+    header
+    echo "Status: ${result}"
+    case "$check_mode" in
+        1|2)
+            if at_cmd "AT*CELL=0" &> /dev/null; then
+                echo ""
+                restart_wwan
+            else
+                error_exit "Failed to disable lock."
+            fi ;;
+    esac
+}
+
+show_status() {
+    get_cell_status
+    check_act=$(echo "$at_cell" | awk -F, '{print $2}')
+    check_band=$(echo "$at_cell" | awk -F, '{print $3}')
+    check_freq=$(echo "$at_cell" | awk -F, '{print $4}')
+    check_cellid=$(echo "$at_cell" | awk -F, '{print $5}')
+    case "$check_act" in
+        0) data="GSM" ;;
+        1) data="UMTS_TD" ;;
+        2) data="UMTS_WB" ;;
+        3) data="LTE" ;;
+        *) data="Unknown" ;;
+    esac
+    case "$check_mode" in
+        0) status="No active lock" ;;
+        1) status="Frequency lock active" ;;
+        2) status="Cell lock active" ;;
+        *) status="Unknown status" ;;
+    esac
+    header
+    echo "${status}"
+    echo "Details:"
+    echo "  Technology : ${data}"
+    echo "  Band       : ${check_band}"
+    echo "  Frequency  : ${check_freq}"
+    echo "  Cell ID    : ${check_cellid}"
+}
+
+main() {
+    if [ $# -eq 0 ]; then
+        error_exit "No command specified. Use '$script_name status' to see frequency/cell lock status."
+    fi
+    case "$(normalize "$1")" in
+        h|help) show_usage ;;
+        d|disable) disable_celllock ;;
+        f|freq) arg_mode="1"; enable_celllock ;;
+        c|cell) arg_mode="2"; enable_celllock ;;
+        s|status) show_status ;;
+        *) error_exit "Invalid command '$1'. Use '$script_name help' for more details." ;;
+    esac
+}
+
+main "$@"

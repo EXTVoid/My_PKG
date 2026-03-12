@@ -1,0 +1,37 @@
+#!/bin/sh
+#
+# Copyright (c) 2023 LENAR
+#
+
+if ! uci -q get luci.@command[-1] >/dev/null; then
+  uci -q batch <<-EOF >/dev/null
+    add luci command
+    set luci.@command[-1].name="Cell Lock"
+    set luci.@command[-1].command="at_celllock"
+    set luci.@command[-1].param="1"
+    add luci command
+    set luci.@command[-1].name="IMEI Change"
+    set luci.@command[-1].command="at_imei"
+    set luci.@command[-1].param="1"
+    add luci command
+    set luci.@command[-1].name="MEP Unlock"
+    set luci.@command[-1].command="at_mep"
+    set luci.@command[-1].param="1"
+    add luci command
+    set luci.@command[-1].name="PIPE Mode"
+    set luci.@command[-1].command="at_pipe"
+    set luci.@command[-1].param="1"
+    add luci command
+    set luci.@command[-1].name="USB Protocol"
+    set luci.@command[-1].command="at_usb"
+    set luci.@command[-1].param="1"
+    add luci command
+    set luci.@command[-1].name="Modem Command"
+    set luci.@command[-1].command="at_exec"
+    set luci.@command[-1].param="1"
+EOF
+fi
+uci set luci.main.lang="auto"
+uci commit luci
+
+exit 0

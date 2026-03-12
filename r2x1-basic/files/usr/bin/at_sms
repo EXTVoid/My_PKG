@@ -1,0 +1,75 @@
+#!/bin/sh
+# Copyright (c) 2023 LENAR
+
+script_name="$(basename "$0")"
+
+show_usage(){
+    cat <<EOF
+Usage: $script_name <Location>
+
+Location
+  device               - Use device storage
+  sim                  - Use sim storage
+  check                - Check location
+
+Examples
+  $script_name s
+  $script_name c
+EOF
+}
+
+header() {
+    echo -e "--[      SMS Storage      ]--\n"
+}
+
+normalize() {
+    echo "$1" | tr 'A-Z' 'a-z'
+}
+
+error_exit() {
+    echo "Error: $1" >&2
+    exit 1
+}
+
+change_location(){
+    if at_exec "sed -i '/save_location/s/[0-9]/$arg_location/' /etc/config/smsconfig" &> /dev/null; then
+        case "$arg_location" in
+            0) location="Device" ;;
+            1) location="SIM" ;;
+        esac
+        header
+        echo "Location: Set to $location."
+    else
+        error_exit "Failed to update SMS configuration."
+    fi
+}
+
+check_location(){
+    smsconfig=$(at_exec "cat /etc/config/smsconfig" | sed -n 's/.*save_location \([0-9]*\).*/\1/p')
+    if [ -z "$smsconfig" ]; then
+        error_exit "Unable to read the configuration file. Please ensure it exists and is readable."
+    else
+        case "$smsconfig" in
+            0) result="Device storage" ;;
+            1) result="SIM storage" ;;
+            *) result="Unknown" ;;
+        esac
+        header
+        echo "Location: $result"
+    fi
+}
+
+main() {
+    if [ $# -eq 0 ]; then
+        error_exit "No command specified. Use '$script_name check' to see location."
+    fi
+    case "$(normalize "$1")" in
+        h|help) show_usage ;;
+        d|device) arg_location="0"; change_location ;;
+        s|sim) arg_location="1"; change_location ;;
+        c|check) check_location ;;
+        *) error_exit "Invalid command '$1'. Use '$script_name help' for more details." ;;
+    esac
+}
+
+main "$@"

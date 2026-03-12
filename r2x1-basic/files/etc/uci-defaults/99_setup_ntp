@@ -1,0 +1,19 @@
+#!/bin/sh
+#
+# Copyright (c) 2023 LENAR
+#
+
+uci -q batch <<-EOF >/dev/null
+  del system.ntp.server
+  del system.ntp.enabled
+  del system.ntp.enable_server
+  add_list system.ntp.server="time.google.com"
+  add_list system.ntp.server="time.cloudflare.com"
+  add_list system.ntp.server="0.openwrt.pool.ntp.org"
+  add_list system.ntp.server="1.openwrt.pool.ntp.org"
+  add_list system.ntp.server="2.openwrt.pool.ntp.org"
+  add_list system.ntp.server="3.openwrt.pool.ntp.org"
+  commit ntp
+EOF
+
+exit 0

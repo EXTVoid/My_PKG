@@ -1,0 +1,18 @@
+#!/bin/sh
+#
+# Copyright (c) 2023 LENAR
+#
+
+HN="$(dmesg | sed -n 's/.*MIPS: machine is \(.*\)/\1/p' | tr ' ' '-')"
+
+uci -q batch <<-EOF >/dev/null
+  set system.@system[0].hostname="${HN}"
+  set system.@system[0].log_proto="tcp"
+  set system.@system[0].conloglevel="7"
+  set system.@system[0].cronloglevel="7"
+  set system.@system[0].zram_comp_algo="lz4"
+  set system.@system[0].clock_hourcycle="h12"
+  commit system
+EOF
+
+exit 0

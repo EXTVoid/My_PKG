@@ -1,0 +1,103 @@
+#!/bin/sh
+# Copyright (c) 2023 LENAR
+
+arg_pn="$2"
+mep=$(at_exec "strings /dev/mtd1" | grep -Eo "[0-9]{8}" | tail -1)
+script_name="$(basename "$0")"
+
+show_usage() {
+    cat <<EOF
+Usage: $script_name <Method> [PN]
+
+Method
+  read                 - Read PN
+  unlock               - Unlock MEP
+  lock                 - Lock MEP
+  test                 - Test PN
+  status               - Lock status
+
+Examples
+  $script_name u
+  $script_name t 1234
+  $script_name s
+EOF
+}
+
+header() {
+    echo -e "--[       MEP Unlock      ]--\n"
+}
+
+normalize() {
+    echo "$1" | tr 'A-Z' 'a-z'
+}
+
+error_exit() {
+    echo "Error: $1" >&2
+    exit 1
+}
+
+check_mep() {
+    [ -z "$mep" ] && error_exit "MEP not found."
+}
+
+read_mep() {
+    check_mep
+    header
+    echo "PN: $mep"
+}
+
+unlock_mep() {
+    check_mep
+    if ! at_cmd "AT+CLCK=PN,0,$mep,16" &> /dev/null; then
+        error_exit "Failed to execute. Unlock command."
+    fi
+    show_status
+}
+
+lock_mep() {
+    check_mep
+    if ! at_cmd "AT+CLCK=PN,1,$mep,16" &> /dev/null; then
+        error_exit "Failed to execute. Lock command."
+    fi
+    show_status
+}
+
+test_pn() {
+    check_mep
+    case "$arg_pn" in
+        '') error_exit "[PN] required on test command." ;;
+        *[!0-9]*) error_exit "[PN] must be numeric." ;;
+    esac
+    if ! at_cmd "AT+CLCK=PN,0,$arg_pn,16" &> /dev/null; then
+        error_exit "Failed to execute. Test command."
+    fi
+    show_status
+}
+
+show_status() {
+    check=$(at_cmd "AT+CLCK=PN,2" | sed -n 's/^+CLCK://p' | xargs)
+    case "$check" in
+        0) status="Unlocked" ;;
+        1) status="Locked" ;;
+        *) status="Unknown" ;;
+    esac
+    header
+    echo "Status: $status"
+}
+
+main() {
+    if [ $# -eq 0 ]; then
+        error_exit "No command specified. Use '$script_name status' to see status."
+    fi
+    case "$(normalize "$1")" in
+        h|help) show_usage ;;
+        r|read) read_mep ;;
+        u|unlock) unlock_mep ;;
+        l|lock) lock_mep ;;
+        t|test) test_pn ;;
+        s|status) show_status ;;
+        *) error_exit "Invalid command '$1'. Use '$script_name help' for more details." ;;
+    esac
+}
+
+main "$@"

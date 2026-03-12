@@ -1,0 +1,75 @@
+#!/bin/sh
+# Copyright (c) 2023 LENAR
+
+arg_mode="$1"
+script_name="$(basename "$0")"
+
+show_usage() {
+    cat <<EOF
+Usage: $script_name <Mode>
+
+Mode
+  disable              - Disable production mode
+  enable               - Enable production mode
+  status               - Show production status
+
+Examples
+  $script_name e
+  $script_name s
+EOF
+}
+
+header() {
+    echo -e "--[    Production Mode    ]--\n"
+}
+
+normalize() {
+    echo "$1" | tr 'A-Z' 'a-z'
+}
+
+error_exit() {
+    echo "Error: $1" >&2
+    exit 1
+}
+
+get_production_status() {
+    if output=$(at_cmd "AT*PROD?" 2> /dev/null); then
+        prod_mode=$(echo "$output" | sed -n 's/^\*PROD://p' | xargs)
+        case "$prod_mode" in
+            0) prod_mode="Disabled" ;;
+            2) prod_mode="Enabled" ;;
+            *) prod_mode="Unknown" ;;
+        esac
+        header
+        echo "Status: $prod_mode"
+    else
+        error_exit "Failed to retrieve production status."
+    fi
+}
+
+set_production_mode() {
+    if at_cmd "AT*PROD=$arg_mode" &> /dev/null; then
+        header
+        echo "Production mode changed. System will reboot..."
+        if ! at_exec "reboot" &> /dev/null; then
+            error_exit "Reboot command failed. Restart device manually."
+        fi
+    else
+        error_exit "Failed to set production mode."
+    fi
+}
+
+main() {
+    if [ $# -eq 0 ]; then
+        error_exit "No command specified. Use '$script_name status' to see status."
+    fi
+    case "$(normalize "$1")" in
+        h|help) show_usage ;;
+        d|disable) arg_mode="0"; set_production_mode ;;
+        e|enable) arg_mode="2"; set_production_mode ;;
+        s|status) get_production_status ;;
+        *) error_exit "Invalid command '$1'. Use '$script_name help' for more details." ;;
+    esac
+}
+
+main "$@"

@@ -1,0 +1,52 @@
+#!/bin/sh
+# Copyright (c) 2023 LENAR
+
+arg_exec="$*"
+acm_file="ttyACM*"
+acm_path=$(find /dev -name "$acm_file" | sort | head -n1)
+script_name="$(basename "$0")"
+
+show_usage() {
+    cat <<EOF
+Usage: $script_name <Command>
+
+Command
+  env                  - Display environment variables
+  getprop              - Get system properties
+  ifconfig             - Display network interface configuration
+  jffs2reset -y        - Reset JFFS2 filesystem
+  reboot               - Reboot the system
+
+Examples
+  $script_name env
+  $script_name reboot
+EOF
+}
+
+normalize() {
+    echo "$1" | tr 'A-Z' 'a-z'
+}
+
+error_exit() {
+    echo "Error: $1" >&2
+    exit 1
+}
+
+run() {
+    [ -z "$acm_path" ] && error_exit "No device found matching '/dev/$acm_file'."
+    if ! sms_tool -d "$acm_path" at "AT%EXE=\"$arg_exec\"" | awk '/AT%EXE/{line=NR} END {for(i=line; i<=NR; i++) print lines[i]} {lines[NR]=$0}'; then
+        error_exit "Failed to execute command '$arg_exec'."
+    fi
+}
+
+main() {
+    if [ $# -eq 0 ]; then
+        error_exit "No command specified. Use '$script_name help' for more details."
+    fi
+    case "$(normalize "$1")" in
+        h|help) show_usage ;;
+        *) run ;;
+    esac
+}
+
+main "$@"

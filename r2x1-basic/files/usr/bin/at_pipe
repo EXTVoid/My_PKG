@@ -1,0 +1,84 @@
+#!/bin/sh
+# Copyright (c) 2023 LENAR
+
+script_name="$(basename "$0")"
+
+show_usage() {
+    cat <<EOF
+Usage: $script_name <Mode>
+
+Modes
+  disable              - Disable PIPE mode
+  enable               - Enable PIPE mode
+  status               - Show PIPE status
+
+Examples
+  $script_name e
+  $script_name s
+EOF
+}
+
+header() {
+    echo -e "--[       PIPE Mode       ]--\n"
+}
+
+normalize() {
+    echo "$1" | tr 'A-Z' 'a-z'
+}
+
+error_exit() {
+    echo "Error: $1" >&2
+    exit 1
+}
+
+factory_reset() {
+    if at_exec "jffs2reset -y && reboot" &> /dev/null; then
+        echo "Resetting to factory settings..."
+    else
+        error_exit "Failed to reset to factory settings."
+    fi
+}
+
+change_mode() {
+    case "$arg_mode" in
+        0) status="disabled" ;;
+        1) status="enabled" ;;
+    esac
+    if at_cmd "AT+ACONFIG=\"PIPE=$arg_mode\"" &> /dev/null; then
+        header
+        echo "PIPE mode $status."
+        echo ""
+        factory_reset
+    else
+        error_exit "Failed to set PIPE mode."
+    fi
+}
+
+show_status() {
+    if ! output=$(at_cmd "AT+ACONFIG?"); then
+        error_exit "Failed to get PIPE status."
+    fi
+    pipe_mode=$(echo "$output" | sed -n 's/.*PIPE=\([0-9]*\),.*/\1/p' | xargs)
+    case "$pipe_mode" in
+        0) status="Disabled" ;;
+        1) status="Enabled" ;;
+        *) status="Unknown" ;;
+    esac
+    header
+    echo "Status: $status"
+}
+
+main() {
+    if [ $# -eq 0 ]; then
+        error_exit "No command specified. Use '$script_name status' to see status."
+    fi
+    case "$(normalize "$1")" in
+        h|help) show_usage ;;
+        d|disable) arg_mode="0"; change_mode ;;
+        e|enable) arg_mode="1"; change_mode ;;
+        s|status) show_status ;;
+        *) error_exit "Invalid command '$1'. Use '$script_name help' for more details." ;;
+    esac
+}
+
+main "$@"

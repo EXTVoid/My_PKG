@@ -1,0 +1,9 @@
+#!/bin/sh
+#
+# Copyright (c) 2023 LENAR
+#
+
+uci del dhcp.lan.ra_slaac
+uci commit dhcp
+
+exit 0

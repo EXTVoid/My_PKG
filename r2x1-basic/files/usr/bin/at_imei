@@ -1,0 +1,134 @@
+#!/bin/sh
+# Copyright (c) 2023 LENAR
+
+arg_imei="$2"
+script_name="$(basename "$0")"
+
+show_usage() {
+    cat <<EOF
+Usage: $script_name <Method> [IMEI]
+
+Method
+  delete               - Delete current IMEI
+  write                - Write new IMEI
+  update               - Update current IMEI
+  read                 - Read current IMEI
+  check                - Check IMEI
+
+Examples
+  $script_name d
+  $script_name w 123456789012345
+  $script_name s
+EOF
+}
+
+
+header() {
+    echo -e "--[      IMEI Change      ]--\n"
+}
+
+normalize() {
+    echo "$1" | tr 'A-Z' 'a-z'
+}
+
+error_exit() {
+    echo "Error: $1" >&2
+    exit 1
+}
+
+imei_check() {
+    check_imei=$(at_cmd "AT*MRD_IMEI?" | sed -n 's/^\*MRD_IMEI://p' | xargs)
+}
+
+prod_enable() {
+    if ! at_exec "serial_atcmd AT*PROD=2" &> /dev/null; then
+        error_exit "Production failed to enable."
+    fi
+}
+
+prod_disable() {
+    if ! at_exec "serial_atcmd AT*PROD=0" &> /dev/null; then
+    error_exit "Production failed to disable."
+    fi
+}
+
+reboot_cp() {
+    if at_exec "reboot" >/dev/null 2>&1; then
+        echo "System will reboot..."
+    else
+        error_exit "Reboot command failed. Restart device manually."
+    fi
+}
+
+delete_imei() {
+    prod_enable
+    if ! output=$(at_cmd "AT*MRD_IMEI=D"); then
+        error_exit "Failed to execute. Delete operation."
+    else
+        imei_check
+        if ! [ -n "$check_imei" ]; then
+            header
+            echo "IMEI successfully deleted."
+            prod_disable
+        else
+            error_exit "Failed to delete IMEI."
+        fi
+    fi
+}
+
+write_update_imei() {
+    prod_enable
+    case "$arg_method" in
+        u) action="Update" ;;
+        w) action="Write" ;;
+    esac
+    if expr "$arg_imei" : '[0-9]\{15\}$'; then
+        return 0
+    else
+        error_exit "Invalid IMEI must be 15 numeric digits."
+    fi
+    if ! output=$(at_cmd "AT*MRD_IMEI=$arg_method,0101,12NOV2010,$arg_imei"); then
+        error_exit "Failed to execute. $action operation."
+    else
+        imei_check
+        if [ "$check_imei" = "$arg_imei" ]; then
+            header
+            echo "$action IMEI successfully."
+            prod_disable && reboot_cp
+        else
+            error_exit "$action IMEI failed."
+        fi
+    fi
+}
+
+read_check_imei() {
+    read_imei=$(at_cmd "AT*MRD_IMEI=R" | sed -n 's/^\*MRD_IMEI://p' | xargs)
+    imei_check
+    case "$arg_method" in
+        r) result="$read_imei" ;;
+        c) result="$check_imei" ;;
+    esac
+    if [ -n "$result" ]; then
+        header
+        echo "IMEI: $result"
+    else
+        error_exit "Failed to read IMEI or no IMEI found."
+    fi
+}
+
+main() {
+    if [ $# -eq 0 ]; then
+        error_exit "No command specified. Use '$script_name check' to check current IMEI."
+    fi
+    case "$(normalize "$1")" in
+        h|help) show_usage ;;
+        d|delete) delete_imei ;;
+        w|write) arg_method="w"; write_update_imei ;;
+        u|update) arg_method="u"; write_update_imei ;;
+        r|read) arg_method="r"; read_check_imei ;;
+        c|check) arg_method="c"; read_check_imei ;;
+        *) error_exit "Invalid command '$1'. Use '$script_name help' for more details." ;;
+    esac
+}
+
+main "$@"
