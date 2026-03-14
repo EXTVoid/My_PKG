@@ -31,6 +31,13 @@ error_exit() {
     exit 1
 }
 
+pipe() {
+    if ! output=$(at_cmd "AT+ACONFIG?"); then
+        error_exit "Failed to get PIPE status."
+    fi
+    pipe_mode=$(echo "$output" | sed -n 's/.*PIPE=\([0-9]*\),.*/\1/p' | xargs)
+}
+
 factory_reset() {
     if at_exec "jffs2reset -y && reboot" &> /dev/null; then
         echo "Resetting to factory settings..."
@@ -40,10 +47,14 @@ factory_reset() {
 }
 
 change_mode() {
+    pipe
     case "$arg_mode" in
         0) status="disabled" ;;
         1) status="enabled" ;;
     esac
+    if [ "$arg_mode" = "$pipe_mode" ]; then
+        error_exit "Already in $status mode."
+    fi
     if at_cmd "AT+ACONFIG=\"PIPE=$arg_mode\"" &> /dev/null; then
         header
         echo "PIPE mode $status."
@@ -55,10 +66,7 @@ change_mode() {
 }
 
 show_status() {
-    if ! output=$(at_cmd "AT+ACONFIG?"); then
-        error_exit "Failed to get PIPE status."
-    fi
-    pipe_mode=$(echo "$output" | sed -n 's/.*PIPE=\([0-9]*\),.*/\1/p' | xargs)
+    pipe
     case "$pipe_mode" in
         0) status="Disabled" ;;
         1) status="Enabled" ;;
