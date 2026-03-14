@@ -56,10 +56,10 @@ set_mode() {
     old_functions=$(get_current_functions | awk -F, '{print $1}')
     base_functions=$(get_current_functions | sed 's/^[^,]*,//')
     new_functions=$(normalize "$1")
+    [ -z "$old_functions" ] && error_exit "Failed to get current functions."
     if [ "$old_functions" = "$new_functions" ]; then
         error_exit "Already in $new_functions protocol."
     fi
-    [ -z "$old_functions" ] && error_exit "Failed to get current functions."
     if at_exec "sed -i '/functions/s/$old_functions/$new_functions/' $usb_init" &> /dev/null; then
         header
         echo "Functions updated successfully:"
