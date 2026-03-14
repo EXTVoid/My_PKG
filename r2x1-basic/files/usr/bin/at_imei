@@ -13,7 +13,7 @@ Method
   write                - Write new IMEI
   update               - Update current IMEI
   read                 - Read current IMEI
-  check                - Check IMEI
+  check                - Check current IMEI
 
 Examples
   $script_name d
