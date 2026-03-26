@@ -19,7 +19,6 @@ Method
 Examples
   $script_name u
   $script_name t 1234
-  $script_name s
 EOF
 }
 

@@ -10,11 +10,11 @@ show_usage() {
 Usage: $script_name <USB Protocol>
 
 USB protocol
-  rndis                - Set rndis protocol (Default)
-  ncm                  - Set ncm protocol (Recommended)
-  ncm_mbim             - Set ncm_mbim protocol (Alternative)
-  mbim                 - Set mbim protocol (Alternative)
-  ecm                  - Set ecm protocol (Alternative)
+  rndis                - Set to rndis protocol
+  ncm                  - Set to ncm protocol
+  ncm_mbim             - Set to ncm_mbim protocol
+  mbim                 - Set to mbim protocol
+  ecm                  - Set to ecm protocol
   config               - Show current configuration
 
 Examples

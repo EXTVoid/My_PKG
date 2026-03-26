@@ -13,7 +13,7 @@ Modes
   status               - Show PIPE status
 
 Examples
-  $script_name e
+  $script_name d
   $script_name s
 EOF
 }

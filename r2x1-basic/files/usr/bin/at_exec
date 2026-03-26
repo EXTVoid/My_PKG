@@ -11,14 +11,13 @@ show_usage() {
 Usage: $script_name <Command>
 
 Command
-  env                  - Display environment variables
   getprop              - Get system properties
   ifconfig             - Display network interface configuration
   jffs2reset -y        - Reset JFFS2 filesystem
   reboot               - Reboot the system
 
 Examples
-  $script_name env
+  $script_name getprop
   $script_name reboot
 EOF
 }

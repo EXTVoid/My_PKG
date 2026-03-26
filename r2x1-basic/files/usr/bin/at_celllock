@@ -26,7 +26,6 @@ Act
 Examples
   $script_name f l 1 150
   $script_name c l 3 1350 123
-  $script_name s
 EOF
 }
 
