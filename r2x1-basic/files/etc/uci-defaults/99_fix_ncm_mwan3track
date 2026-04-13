@@ -4,5 +4,6 @@
 #
 
 sed -i '/gcom/s/manufacturer=.*/manufacturer="notion"/g' /lib/netifd/proto/ncm.sh
+sed -i 'H;1h;$!d;x; s/\(.*\)firstconnect\(.*\)/\1sleep 10 \&\& firstconnect\2/' /usr/sbin/mwan3track
 
 exit 0
