@@ -84,7 +84,7 @@ write_update_imei() {
     if ! expr "$arg_imei" : '[0-9]\{15\}$' &> /dev/null; then
         error_exit "Invalid IMEI must be 15 numeric digits."
     fi
-    if ! output=$(at_cmd "AT*MRD_IMEI=$arg_method,0101,12NOV2010,$arg_imei"); then
+    if ! output=$(at_cmd "AT*MRD_IMEI=$arg_method,0101,01JAN1970,$arg_imei"); then
         error_exit "Failed to execute. $action operation."
     else
         imei_check
