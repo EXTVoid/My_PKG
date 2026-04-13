@@ -3,7 +3,12 @@
 # Copyright (c) 2023 LENAR
 #
 
-uci del dhcp.lan.ra_slaac
+uci -q batch <<-EOF >/dev/null
+  del dhcp.lan.ra
+  del dhcp.lan.ra_flags
+  del dhcp.lan.ra_slaac
+  del dhcp.lan.dhcpv6
+EOF
 uci commit dhcp
 
 exit 0
