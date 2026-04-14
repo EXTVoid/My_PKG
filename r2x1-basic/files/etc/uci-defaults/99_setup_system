@@ -10,7 +10,6 @@ uci -q batch <<-EOF >/dev/null
   set system.@system[0].log_proto="tcp"
   set system.@system[0].conloglevel="7"
   set system.@system[0].cronloglevel="7"
-  set system.@system[0].zram_comp_algo="lz4"
   set system.@system[0].clock_hourcycle="h12"
   commit system
 EOF
