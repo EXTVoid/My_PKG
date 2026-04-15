@@ -50,9 +50,9 @@ get_production_status() {
 set_production_mode() {
     if at_cmd "AT*PROD=$arg_mode" &> /dev/null; then
         header
-        echo "Production mode changed. System will reboot..."
+        echo "Production mode changed. Module will reboot..."
         if ! at_exec "reboot" &> /dev/null; then
-            error_exit "Reboot command failed. Restart device manually."
+            error_exit "Failed to restart module. Restart device manually."
         fi
     else
         error_exit "Failed to set production mode."
