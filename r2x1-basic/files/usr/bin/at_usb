@@ -48,7 +48,7 @@ restart_cp() {
     if at_exec "reboot" &> /dev/null; then
         echo "Restarting module..."
     else
-        error_exit "Failed to restart module."
+        error_exit "Failed to restart module. Restart device manually."
     fi
 }
 
