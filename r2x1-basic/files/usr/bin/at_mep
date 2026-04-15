@@ -48,7 +48,7 @@ read_mep() {
 unlock_mep() {
     check_mep
     if ! at_cmd "AT+CLCK=PN,0,$mep,16" &> /dev/null; then
-        error_exit "Failed to execute. Unlock command."
+        error_exit "Failed to execute unlock command."
     fi
     show_status
 }
@@ -56,7 +56,7 @@ unlock_mep() {
 lock_mep() {
     check_mep
     if ! at_cmd "AT+CLCK=PN,1,$mep,16" &> /dev/null; then
-        error_exit "Failed to execute. Lock command."
+        error_exit "Failed to execute lock command."
     fi
     show_status
 }
@@ -68,7 +68,7 @@ test_pn() {
         *[!0-9]*) error_exit "[PN] must be numeric." ;;
     esac
     if ! at_cmd "AT+CLCK=PN,0,$arg_pn,16" &> /dev/null; then
-        error_exit "Failed to execute. Test command."
+        error_exit "Failed to execute test command."
     fi
     show_status
 }
