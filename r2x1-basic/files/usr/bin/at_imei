@@ -41,28 +41,28 @@ imei_check() {
 
 prod_enable() {
     if ! at_exec "serial_atcmd AT*PROD=2" &> /dev/null; then
-        error_exit "Production failed to enable."
+        error_exit "Failed to enable production mode."
     fi
 }
 
 prod_disable() {
     if ! at_exec "serial_atcmd AT*PROD=0" &> /dev/null; then
-    error_exit "Production failed to disable."
+    error_exit "Failed to disable production mode."
     fi
 }
 
 reboot_cp() {
     if at_exec "reboot" >/dev/null 2>&1; then
-        echo "System will reboot..."
+        echo "Restarting module..."
     else
-        error_exit "Reboot command failed. Restart device manually."
+        error_exit "Failed to restart module. Restart device manually."
     fi
 }
 
 delete_imei() {
     prod_enable
     if ! output=$(at_cmd "AT*MRD_IMEI=D"); then
-        error_exit "Failed to execute. Delete operation."
+        error_exit "Failed to execute Delete command."
     else
         imei_check
         if ! [ -n "$check_imei" ]; then
@@ -76,31 +76,32 @@ delete_imei() {
 }
 
 write_update_imei() {
+    imei_check
     prod_enable
     case "$arg_method" in
         u) action="Update" ;;
         w) action="Write" ;;
     esac
+    [ "$check_imei" = "$arg_imei" ] && error_exit "$action skipped because IMEI is the same."
     if ! expr "$arg_imei" : '[0-9]\{15\}$' &> /dev/null; then
-        error_exit "Invalid IMEI must be 15 numeric digits."
+        error_exit "IMEI must be 15 numeric digits."
     fi
     if ! output=$(at_cmd "AT*MRD_IMEI=$arg_method,0101,01JAN1970,$arg_imei"); then
-        error_exit "Failed to execute. $action operation."
+        error_exit "Failed to execute $(normalize "$action") command."
     else
-        imei_check
         if [ "$check_imei" = "$arg_imei" ]; then
             header
-            echo "$action IMEI successfully."
+            echo "$action IMEI completed successfully."
             prod_disable && reboot_cp
         else
-            error_exit "$action IMEI failed."
+            error_exit "Failed to $(normalize "$action") IMEI."
         fi
     fi
 }
 
 read_check_imei() {
-    read_imei=$(at_cmd "AT*MRD_IMEI=R" | sed -n 's/^\*MRD_IMEI://p' | xargs)
     imei_check
+    read_imei=$(at_cmd "AT*MRD_IMEI=R" | sed -n 's/^\*MRD_IMEI://p' | xargs)
     case "$arg_method" in
         r) result="$read_imei" ;;
         c) result="$check_imei" ;;
